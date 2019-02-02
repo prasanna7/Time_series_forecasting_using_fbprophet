@@ -1,0 +1,77 @@
+---
+title: "Retail_Sales_Models"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+#### Load Necessary Packages
+```{r warning=FALSE, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+library(lubridate)
+library(prophet)
+library(hydroGOF)
+```
+
+#### Importing the data
+```{r}
+train <- as.data.frame(fread('train.csv'))
+test <- as.data.frame(fread('test.csv'))
+```
+
+#### Cleaning the data
+```{r}
+# Changing the data type from character to date
+
+train$ds <- as_date(train$ds)
+test$ds <- as_date(test$ds)
+```
+
+#### Description of data
+```{r}
+# Extracting some descriptive information about the data
+# train:test :: 80:20
+
+sprintf("Range of training dataset: %s to %s", min(train$ds), max(train$ds))
+
+sprintf("Range of testing dataset: %s to %s", min(test$ds), max(test$ds))
+
+sprintf("Number of records in training dataset: %i", nrow(train))
+
+sprintf("Number of records in testing dataset: %i", nrow(test))
+```
+
+#### Bulding the model
+```{r message=FALSE}
+# Building the model
+model <- prophet(train)
+
+# Forecasting for test period of 59 days
+test_period <- nrow(test)
+
+future <- make_future_dataframe(model, periods = test_period)
+forecast <- predict(model, future)
+
+forecast_test <- tail(forecast, 59)
+
+```
+
+#### Delineating the trends
+```{r}
+prophet_plot_components(model, forecast)
+```
+
+#### Comparison with forecast
+```{r}
+plot(model, forecast)
+```
+
+#### Evaluation Metrics:
+```{r}
+eval_rmse <- round(rmse(test$y, forecast_test$yhat))
+
+sprintf("Root mean squared error b/w actual and predicted: %i", eval_rmse)
+```
